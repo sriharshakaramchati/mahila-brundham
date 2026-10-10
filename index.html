@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Monthly Contribution</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;700&family=Noto+Sans+Telugu:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head><body>
+<header>
+<svg class="diya" viewBox="0 0 60 40" aria-hidden="true"><path d="M30 2c5 7 6 11 0 16-6-5-5-9 0-16z" fill="#ffb347"/><path d="M4 22h52c0 10-10 16-26 16S4 32 4 22z" fill="#c9962b"/><path d="M8 22h44" stroke="#6b0f1a" stroke-width="2"/></svg>
+<div class="om">&#2384;</div><div class="shri">&#3126;&#3149;&#3120;&#3136;</div>
+<h1 id="grp"></h1><div id="grpTe" style="font-family:'Noto Sans Telugu',sans-serif;font-size:1.15rem;color:#ffe9b8;margin:2px 0 4px;font-weight:700"></div><p id="tag"></p>
+</header>
+<main>
+<section class="card"><h2 id="monH"></h2>
+<div class="center small" id="win"></div>
+<div class="small center">Contribution: <span id="amts"></span></div></section>
+<section class="card" id="acct" hidden><h2>My contribution</h2>
+<div id="gin" class="center"></div><div id="who" class="small center"></div>
+<form id="linkf" hidden><div class="small">First time? Enter the mobile number the group has for you, to link your Google account once.</div><input name="phone" inputmode="numeric" placeholder="Registered mobile number" required><button class="btn" type="submit">Link my account</button></form>
+<div id="members"></div><div id="msg"></div></section>
+<section class="card"><h2>Pay by Google Pay or PhonePe</h2>
+<div class="center small">Send to this number:</div><div class="amt" id="pn" style="font-size:1.8rem"></div><button class="btn alt" id="cpn">Copy number</button>
+<div class="small center" style="margin-top:8px">Open Google Pay or PhonePe, choose "Pay to phone number", paste this number, enter your amount, and pay. Then tap "I have paid" above.</div>
+<div id="qrbox">
+<img id="qr" class="qr" alt="UPI QR code">
+<div class="small center">Scan with any UPI app (GPay, PhonePe, Paytm, BHIM)</div>
+<a id="upiBtn" class="btn">Pay in UPI app (on phone)</a></div></section>
+<section class="card"><h2>Paid already?</h2><div class="small center">Send a quick note so it is marked received.</div><a id="waBtn" class="btn alt" target="_blank" rel="noopener">Tell the collector on WhatsApp</a></section>
+</main>
+<footer><b id="ft"></b>May the Lord Varadaraja bless you and your family.</footer>
+<script src="config.js"></script>
+<script>
+const C=window.MB_CONFIG,$=id=>document.getElementById(id);
+const inr=n=>"\u20B9"+Number(n).toLocaleString("en-IN");
+const month=new Date().toLocaleDateString("en-IN",{month:"long",year:"numeric"});
+document.title=C.groupName;$("grp").textContent=C.groupName;$("grpTe").textContent=C.groupTelugu||"";$("tag").textContent=C.tagline;$("ft").textContent=C.groupName;
+$("monH").textContent=month;$("win").textContent="Collected from the "+C.window;$("amts").textContent=C.amounts.map(inr).join(" or ");
+$("qr").src=C.qrImage;
+function upi(amt){return "upi://pay?pa="+encodeURIComponent(C.upiId)+"&pn="+encodeURIComponent(C.payeeName)+(amt?"&am="+amt:"")+"&cu=INR&tn="+encodeURIComponent("Mahila Brundham "+month)}
+$("pn").textContent="+91 "+C.payNumber.replace(/(\d{5})(\d{5})/,"$1 $2");$("cpn").onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(C.payNumber);$("cpn").textContent="Copied";setTimeout(()=>$("cpn").textContent="Copy number",1200)};
+if(!C.upiId){$("qrbox").hidden=true}else $("upiBtn").href=upi();
+if(/^9{3}/.test(C.whatsappNumber.slice(2))||!C.whatsappNumber)$("waBtn").closest("section").hidden=true;
+$("waBtn").href="https://wa.me/"+C.whatsappNumber+"?text="+encodeURIComponent("Namaskaram, I have paid the "+month+" contribution. Name: ");
+const K=new URLSearchParams(location.search).get("k")||"";
+let tok=sessionStorage.getItem("idt")||"";
+async function api(o){const r=await fetch(C.backendUrl,{method:"POST",headers:{"Content-Type":"text/plain"},body:JSON.stringify({...o,idToken:tok,k:K})});return r.json()}
+const LBL={N:"Not paid yet",C:"Waiting for confirmation",Y:"Paid"};
+function show(d){$("who").textContent=K?"Namaskaram, "+d.who:"Signed in as "+d.who;$("gin").hidden=true;$("linkf").hidden=d.members.length>0||!!K;
+const box=$("members");box.innerHTML="";
+d.members.forEach(c=>{const el=document.createElement("div");el.className="member";
+const t=document.createElement("div");t.style.fontWeight="700";t.textContent=c.name;
+const m=document.createElement("div");m.className="small";m.textContent=inr(c.amount)+" for "+month;
+const b=document.createElement("span");b.className="badge b-"+c.status;b.textContent=LBL[c.status]+(c.status==="Y"&&c.paidOn?" on "+c.paidOn:"");el.append(t,m,b);
+if(c.status==="N"){const a=document.createElement("a");a.className="btn alt";if(C.upiId){a.href=upi(c.amount);a.textContent="Pay "+inr(c.amount)+" in UPI app"}else{a.href="#pn";a.textContent="Pay "+inr(c.amount)+" to the number below"}
+const i=document.createElement("input");i.placeholder="UPI reference / UTR (optional)";const x=document.createElement("button");x.className="btn";x.textContent="I have paid";
+x.onclick=async()=>{x.textContent="Saving...";const r=await api({action:"claim",row:c.row,reference:i.value});if(r.ok)show(r);else $("msg").textContent=r.error};el.append(a,i,x)}
+box.append(el)})}
+async function load(){const d=await api({action:"me"});if(d.ok)show(d);else{$("msg").textContent=d.error;sessionStorage.removeItem("idt");tok=""}}
+async function onCred(resp){tok=resp.credential;sessionStorage.setItem("idt",tok);$("msg").textContent="";load()}
+$("linkf").onsubmit=async ev=>{ev.preventDefault();const f=Object.fromEntries(new FormData(ev.target));const r=await api({action:"link",phone:f.phone});if(r.ok){$("msg").textContent="Linked. Jai Sri Varadaraja!";load()}else $("msg").textContent=r.error};
+if(C.backendUrl){$("acct").hidden=false;
+if(K){$("gin").hidden=true;load()}
+else if(C.googleClientId){const s=document.createElement("script");s.src="https://accounts.google.com/gsi/client";s.async=true;s.onload=()=>{google.accounts.id.initialize({client_id:C.googleClientId,callback:onCred});google.accounts.id.renderButton($("gin"),{theme:"outline",size:"large",text:"signin_with",width:280});if(tok)load()};document.head.append(s)}}
+</script></body></html>
