@@ -9,7 +9,7 @@ window.MB_CONFIG = {
   payNumber: "9542235727",               // GPay / PhonePe number (from user via parent; CONFIRM)
   upiId: "sravranga-1@oksbi",            // from the QR the user shared
   payeeName: "Sravanthi T",
-  qrImage: "26-qr.jpg",         // user-supplied QR
+  qrImage: "1-qr.jpg",         // user-supplied QR
   whatsappNumber: "919542235727",        // collector (Shravanti), per the user; she is asked to confirm it is on WhatsApp
   backendUrl: "https://script.google.com/macros/s/AKfycbxMEx7qr321mUOl5kss3QVA9CWlc4cKAHbNKL3zzkJbyheuz-EJkirHMaNWi5zu9OME/exec",
   googleClientId: "465242572234-jke8rd9hp8437nvdae5c1i44cfpu7c91.apps.googleusercontent.com"  // public; same domain as the other site
