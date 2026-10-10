@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Collector dashboard</title><meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>main{max-width:760px}table{width:100%;border-collapse:collapse;font-size:.95rem}td,th{padding:6px 4px;border-bottom:1px solid #efe0b8;text-align:left;vertical-align:middle}
+.sm{padding:4px 9px;border-radius:8px;border:1px solid var(--maroon);background:#fff;color:var(--maroon);font:inherit;font-size:.85rem;cursor:pointer;text-decoration:none;display:inline-block;margin:1px}
+.stats{display:flex;gap:8px;text-align:center}.stats div{flex:1;background:#fffdf7;border:1px solid #efe0b8;border-radius:10px;padding:8px}.stats b{display:block;font-size:1.3rem;color:var(--maroon)}</style>
+</head><body>
+<header><div class="om">&#2384;</div><h1>Collector dashboard</h1><p id="mon"></p></header>
+<main>
+<section class="card" id="login"><h2>Passcode</h2><input id="pc" type="password" placeholder="Dashboard passcode"><button class="btn" id="go">Open</button><div id="msg"></div></section>
+<div id="app" hidden>
+<section class="card"><div class="stats"><div><b id="sPaid">0</b>Paid</div><div><b id="sWait">0</b>To confirm</div><div><b id="sLeft">0</b>Pending</div><div><b id="sAmt">0</b>Collected</div></div>
+<button class="btn alt" id="copyList">Copy pending list for the group</button></section>
+<section class="card"><h2>Members</h2><div style="overflow-x:auto"><table id="tb"></table></div></section>
+<section class="card"><h2>Add member</h2><form id="addf"><input name="name" placeholder="Name" required><input name="phone" placeholder="Mobile number" inputmode="numeric"><select name="amount"><option>5000</option><option>6000</option></select><button class="btn" type="submit">Add</button></form></section>
+</div></main>
+<script src="config.js"></script>
+<script>
+const C=window.MB_CONFIG,$=id=>document.getElementById(id);let pass="",rows=[],month="";
+const inr=n=>"\u20B9"+Number(n).toLocaleString("en-IN");
+async function api(o){const r=await fetch(C.backendUrl,{method:"POST",headers:{"Content-Type":"text/plain"},body:JSON.stringify({...o,passcode:pass})});return r.json()}
+const link=r=>location.origin+location.pathname.replace(/admin\.html$/,"")+"?k="+r.token;
+function wa(r){const n=String(r.phone).replace(/\D/g,"").slice(-10);const t="Namaskaram "+r.name+", a gentle reminder for this month's "+C.groupName+" contribution ("+inr(r.amount)+"). Pay and see your status here: "+link(r)+" . If already paid, please ignore. - "+C.collector;return "https://wa.me/"+(n.length===10?"91"+n:"")+"?text="+encodeURIComponent(t)}
+function draw(){const t=$("tb");t.innerHTML="<tr><th>Name</th><th>Amt</th><th>Status</th><th></th></tr>";let p=0,w=0,l=0,a=0;
+rows.filter(r=>r.active).forEach(r=>{if(r.status==="Y"){p++;a+=r.amount}else if(r.status==="C")w++;else l++;
+const tr=document.createElement("tr");const n=document.createElement("td");n.textContent=r.name;const am=document.createElement("td");am.textContent=inr(r.amount);
+const s=document.createElement("td");const b=document.createElement("span");b.className="badge b-"+r.status;b.textContent={N:"Pending",C:"Says paid",Y:"Paid"}[r.status];s.append(b);
+const ac=document.createElement("td");
+const mk=(txt,fn,href)=>{const e=document.createElement(href?"a":"button");e.className="sm";e.textContent=txt;if(href){e.href=href;e.target="_blank"}else e.onclick=fn;ac.append(e)};
+if(r.status!=="Y")mk("Mark paid",()=>save(r,{status:"Y"}));else mk("Undo",()=>save(r,{status:"N"}));
+if(r.status!=="Y")mk("WhatsApp",null,wa(r));
+mk("Copy link",()=>{navigator.clipboard.writeText(link(r))});
+mk("Edit",()=>{const nm=prompt("Name",r.name);if(nm===null)return;const ph=prompt("Mobile",r.phone);if(ph===null)return;const am=prompt("Amount (5000 or 6000)",r.amount);if(am===null)return;save(r,{name:nm,phone:ph,amount:am})});
+tr.append(n,am,s,ac);t.append(tr)});
+$("sPaid").textContent=p;$("sWait").textContent=w;$("sLeft").textContent=l;$("sAmt").textContent=inr(a)}
+async function save(r,ch){const o={action:"save",row:r.row,name:r.name,phone:r.phone,email:r.email,amount:r.amount,status:r.status,active:r.active,...ch};const x=await api(o);if(x.ok)refresh();else alert(x.error)}
+async function refresh(){const d=await api({action:"list"});if(!d.ok){$("msg").textContent=d.error;return}rows=d.rows;month=d.month;$("mon").textContent=month;$("login").hidden=true;$("app").hidden=false;draw()}
+$("go").onclick=()=>{pass=$("pc").value;refresh()};
+$("copyList").onclick=()=>{const l=rows.filter(r=>r.active&&r.status!=="Y").map((r,i)=>(i+1)+". "+r.name+" - "+inr(r.amount)).join("\n");navigator.clipboard.writeText("Namaskaram \uD83D\uDE4F "+month+" contribution pending:\n"+l+"\nPay here: "+location.origin+location.pathname.replace(/admin\.html$/,""))};
+$("addf").onsubmit=async ev=>{ev.preventDefault();const f=Object.fromEntries(new FormData(ev.target));const x=await api({action:"save",...f});if(x.ok){ev.target.reset();refresh()}else alert(x.error)};
+</script></body></html>
